@@ -367,11 +367,35 @@
     border-bottom: 1px solid var(--border);
     text-align: center;
     color: var(--muted);
+    white-space: nowrap;
   }
 
   .squad-table tr:last-child td { border-bottom: none; }
   .squad-table td:first-child { text-align: left; color: var(--text); font-weight: 500; }
   .squad-table td:nth-child(2) { color: var(--text); }
+
+  /* Sticky first column */
+  .squad-table th:first-child,
+  .squad-table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+  }
+  .squad-table th:first-child { background: var(--surface2); }
+  .squad-table td:first-child { background: var(--surface); }
+
+  /* Sticky first column for squad stats */
+  .squad-scroll-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .squad-sticky { width: max-content; min-width: 100%; }
+  .squad-sticky .sticky-col {
+    position: sticky;
+    left: 0;
+    background: var(--surface);
+    z-index: 2;
+    min-width: 110px;
+    max-width: 130px;
+  }
+  .squad-sticky thead .sticky-col { background: var(--surface2); z-index: 3; }
 
   /* ─── NOMINATION FORM ───────────────────────────── */
   .position-grid {
@@ -838,8 +862,9 @@ let state = {
   role:     null,
   coach:    null,
   metadata: null,
-  squads:   null,
-  fixtures: null,
+  squads:      null,   // plain player names
+  myTeamNames: null,   // formatted: 'Ben King (GC)'
+  fixtures:    null,
   allTeams: [],
 };
 
@@ -944,9 +969,11 @@ async function initApp() {
   ]);
 
   state.metadata = meta;
-  state.squads   = squads;
+  // getSquads now returns {squads, myTeamNames} - handle both old and new format
+  state.squads     = squads.squads     || squads;
+  state.myTeamNames = squads.myTeamNames || squads.squads || squads;
   state.fixtures = fixtures;
-  state.allTeams = Object.keys(squads).sort();
+  state.allTeams = Object.keys(state.squads).sort();
 
   // Header
   const headerRound = document.getElementById('header-round');
@@ -1224,45 +1251,40 @@ async function loadSquadStats() {
 
   const data = await apiGet('getPlayerStats', { team });
 
-  // If stats tab not populated yet, fall back to plain squad list
+  // Fallback to plain list if no stats yet
   if (!data.players || data.players.length === 0) {
     const squad = (state.squads && state.squads[team]) || [];
     if (!squad.length) { card.innerHTML = '<div class="empty-state">No squad data found.</div>'; return; }
-
     card.innerHTML = `
       <div class="scroll-x">
       <table class="squad-table">
         <thead><tr><th>Player</th></tr></thead>
-        <tbody>
-          ${squad.map(p => `<tr><td>${p}</td></tr>`).join('')}
-        </tbody>
-      </table>
-      </div>
-      <div style="padding:10px 14px;font-size:11px;color:var(--muted)">
-        Stats will appear once the season begins.
-      </div>`;
+        <tbody>${squad.map(p => `<tr><td>${p}</td></tr>`).join('')}</tbody>
+      </table></div>
+      <div style="padding:10px 14px;font-size:11px;color:var(--muted)">Stats will appear once the season begins.</div>`;
     return;
   }
 
+  const d = (v) => (v === undefined || v === null || v === '') ? '-' : v;
+
   card.innerHTML = `
-    <div class="scroll-x">
-    <table class="squad-table">
+    <div class="squad-scroll-wrap">
+    <table class="squad-table squad-sticky">
       <thead><tr>
-        <th>Player</th><th>Club</th><th>Career</th><th>2026</th>
-        <th>Av K</th><th>Av H</th><th>Av T</th><th>Av G</th><th>Av B</th>
+        <th class="sticky-col">Player</th>
+        <th>Club</th><th>Career</th><th>2026</th>
+        <th>Av K</th><th>Av H</th><th>Av D</th><th>Av M</th><th>Av HO</th>
+        <th>Av T</th><th>Av FF</th><th>Av FA</th><th>Av G</th><th>Av B</th>
       </tr></thead>
       <tbody>
         ${data.players.map(p => `
           <tr>
-            <td>${p.player}</td>
-            <td>${p.club || '—'}</td>
-            <td>${p.careerGames || '—'}</td>
-            <td>${p.games2026 || '—'}</td>
-            <td>${p.avgK || '—'}</td>
-            <td>${p.avgH || '—'}</td>
-            <td>${p.avgT || '—'}</td>
-            <td>${p.avgG || '—'}</td>
-            <td>${p.avgB || '—'}</td>
+            <td class="sticky-col">${p.player}</td>
+            <td>${d(p.club)}</td><td>${d(p.careerGames)}</td><td>${d(p.games2026)}</td>
+            <td>${d(p.avgK)}</td><td>${d(p.avgH)}</td><td>${d(p.avgD)}</td>
+            <td>${d(p.avgM)}</td><td>${d(p.avgHO)}</td><td>${d(p.avgT)}</td>
+            <td>${d(p.avgFF)}</td><td>${d(p.avgFA)}</td><td>${d(p.avgG)}</td>
+            <td>${d(p.avgB)}</td>
           </tr>
         `).join('')}
       </tbody>
@@ -1296,7 +1318,9 @@ async function renderNominationForm() {
     if (nom.nomination) existing = nom.nomination;
   } catch(e) {}
 
-  const squad = (state.squads && state.squads[state.team]) || [];
+  const squad = (state.myTeamNames && state.myTeamNames[state.team])
+             || (state.squads    && state.squads[state.team])
+             || [];
 
   const makeOptions = (selected) =>
     `<option value="">— select —</option>` +
