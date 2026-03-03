@@ -566,75 +566,102 @@
     display: none;
     background: var(--surface2);
     border-top: 1px solid var(--border);
-    padding: 12px 14px;
   }
 
   .fixture-detail-panel.open { display: block; }
 
-  .detail-teams-grid {
+  /* Side-by-side team columns */
+  .detail-split {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    grid-template-columns: 1fr 2px 1fr;
+    gap: 0;
   }
 
-  .detail-team-col h4 {
+  .detail-divider {
+    background: var(--border);
+    width: 1px;
+    margin: 12px 0;
+  }
+
+  .detail-team-block {
+    padding: 12px 12px 8px;
+  }
+
+  .detail-team-name {
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--gold);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  .detail-player-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    padding: 4px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 12px;
-    gap: 6px;
+  /* Two-line player card */
+  .detail-player-card {
+    background: var(--surface);
+    border-radius: 6px;
+    padding: 6px 8px;
+    margin-bottom: 6px;
   }
 
-  .detail-player-row:last-child { border-bottom: none; }
-
-  .detail-pos {
+  .detail-player-pos {
     font-size: 10px;
     color: var(--muted);
     text-transform: uppercase;
-    flex-shrink: 0;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
   }
 
-  .detail-name {
-    flex: 1;
+  .detail-player-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  .detail-player-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    flex: 1;
   }
 
-  .detail-score {
+  .detail-player-score {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 16px;
+    font-size: 18px;
     color: var(--gold);
     flex-shrink: 0;
   }
 
-  .detail-total {
-    margin-top: 8px;
+  .detail-team-total {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 8px 0;
+    font-size: 12px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    margin-top: 4px;
+    font-weight: 600;
+  }
+
+  .detail-team-total span:last-child {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 20px;
+    font-size: 18px;
     color: var(--text);
-    text-align: right;
   }
 
   .detail-empty {
     font-size: 12px;
     color: var(--muted);
     text-align: center;
-    padding: 12px 0;
+    padding: 12px 8px;
+    line-height: 1.5;
   }
   .round-selector {
     display: flex;
@@ -1094,9 +1121,13 @@ function filterFixturesByRound(round, btn) {
     return;
   }
 
-  card.innerHTML = matches.map((f, i) => `
+  card.innerHTML = matches.map((f, i) => {
+    const gameId = f.gameId || '';
+    const hEsc   = (f.home || '').replace(/`/g, '\\`');
+    const aEsc   = (f.away || '').replace(/`/g, '\\`');
+    return `
     <div>
-      <div class="fixture-row" style="cursor:default">
+      <div class="fixture-row">
         <div class="fixture-teams" style="flex:1">
           <div class="fixture-team">${f.home}</div>
           <div class="fixture-vs">vs</div>
@@ -1106,73 +1137,80 @@ function filterFixturesByRound(round, btn) {
           ${f.deadline ? formatDeadlineLong(f.deadline) : '—'}
         </div>
         <button class="fixture-expand-btn" id="expand-btn-${i}"
-          onclick="toggleMatchDetail(${i}, '${f.round}', \`${f.home}\`, \`${f.away}\`)">
-          ▼ Detail
+          onclick="toggleMatchDetail(${i}, '${gameId}', \`${hEsc}\`, \`${aEsc}\`)">
+          ▼ Scores
         </button>
       </div>
-      <div class="fixture-detail-panel" id="detail-panel-${i}">
-        <div class="detail-empty">Tap Detail to load scores</div>
-      </div>
-    </div>
-  `).join('');
+      <div class="fixture-detail-panel" id="detail-panel-${i}"></div>
+    </div>`;
+  }).join('');
 }
 
 // ─── MATCH DETAIL EXPAND ─────────────────────────────────
-async function toggleMatchDetail(idx, round, home, away) {
+async function toggleMatchDetail(idx, gameId, home, away) {
   const panel = document.getElementById(`detail-panel-${idx}`);
   const btn   = document.getElementById(`expand-btn-${idx}`);
 
   // Toggle close
   if (panel.classList.contains('open')) {
     panel.classList.remove('open');
-    btn.textContent = '▼ Detail';
+    btn.textContent = '▼ Scores';
     return;
   }
 
-  // Open and load
   panel.classList.add('open');
   btn.textContent = '▲ Loading...';
   btn.classList.add('loading');
   panel.innerHTML = '<div class="detail-empty"><span class="spinner"></span> Loading scores...</div>';
 
   try {
-    const data = await apiGet('getMatchDetails', { round, home, away });
+    const data = await apiGet('getMatchDetails', { gameId, home, away });
 
     if (!data.hasData) {
       panel.innerHTML = `
         <div class="detail-empty">
-          No scores yet for this fixture.<br>
-          <span style="font-size:11px">Scores appear once players have taken the field.</span>
+          ${data.error || 'No scores yet for this fixture.'}<br>
+          <span style="font-size:11px;opacity:.7">Scores appear once players take the field.</span>
         </div>`;
-      btn.textContent = '▲ Detail';
+      btn.textContent = '▲ Scores';
       btn.classList.remove('loading');
       return;
     }
 
-    const renderTeam = (name, scores, total) => `
-      <div class="detail-team-col">
-        <h4>${name}</h4>
-        ${scores.length ? scores.map(p => `
-          <div class="detail-player-row">
-            <span class="detail-pos">${p.position || ''}</span>
-            <span class="detail-name">${p.player}</span>
-            <span class="detail-score">${p.score}</span>
-          </div>
-        `).join('') : '<div class="detail-empty">No players scored yet</div>'}
-        ${scores.length ? `<div class="detail-total">Total: ${total}</div>` : ''}
+    const renderTeamScores = (teamName, scores, total) => `
+      <div class="detail-team-block">
+        <div class="detail-team-name">${teamName}</div>
+        ${scores.length === 0
+          ? '<div class="detail-empty">No players scored yet</div>'
+          : scores.map(p => `
+            <div class="detail-player-card">
+              <div class="detail-player-pos">${p.position}</div>
+              <div class="detail-player-bottom">
+                <span class="detail-player-name">${p.player}</span>
+                <span class="detail-player-score">${p.score}</span>
+              </div>
+            </div>
+          `).join('')
+        }
+        ${scores.length > 0 ? `
+          <div class="detail-team-total">
+            <span>Total</span>
+            <span>${total}</span>
+          </div>` : ''}
       </div>`;
 
     panel.innerHTML = `
-      <div class="detail-teams-grid">
-        ${renderTeam(home, data.homeScores, data.homeTotal)}
-        ${renderTeam(away, data.awayScores, data.awayTotal)}
+      <div class="detail-split">
+        ${renderTeamScores(home, data.homeScores, data.homeTotal)}
+        <div class="detail-divider"></div>
+        ${renderTeamScores(away, data.awayScores, data.awayTotal)}
       </div>`;
 
   } catch(e) {
     panel.innerHTML = '<div class="detail-empty">Failed to load scores. Try again.</div>';
   }
 
-  btn.textContent = '▲ Detail';
+  btn.textContent = '▲ Scores';
   btn.classList.remove('loading');
 }
 
