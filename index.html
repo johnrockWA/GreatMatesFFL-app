@@ -757,11 +757,14 @@ async function apiGet(action, params = {}) {
 }
 
 async function apiPost(payload) {
-  const r = await fetch(API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...payload, token: state.token }),
+  // Apps Script doesn't support cross-origin POST easily
+  // Route all writes through GET with encoded params instead
+  const url = new URL(API);
+  Object.entries(payload).forEach(([k, v]) => {
+    url.searchParams.set(k, typeof v === 'object' ? JSON.stringify(v) : v);
   });
+  if (state.token) url.searchParams.set('token', state.token);
+  const r = await fetch(url.toString());
   return r.json();
 }
 
