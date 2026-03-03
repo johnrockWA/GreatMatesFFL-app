@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Great Mates FFL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ─── RESET & BASE ─────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0d1117;
+    --surface:   #161b22;
+    --surface2:  #1c2128;
+    --border:    #30363d;
+    --gold:      #f0b429;
+    --gold-dim:  #b8891f;
+    --text:      #e6edf3;
+    --muted:     #8b949e;
+    --green:     #3fb950;
+    --red:       #f85149;
+    --blue:      #58a6ff;
+    --radius:    10px;
+    --tab-h:     60px;
+    --header-h:  56px;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  /* ─── APP SHELL ────────────────────────────────── */
+  #app { height: 100vh; display: flex; flex-direction: column; }
+
+  #header {
+    height: var(--header-h);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    flex-shrink: 0;
+    z-index: 10;
+  }
+
+  #header-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 1px;
+    color: var(--gold);
+  }
+
+  #header-round {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: right;
+    line-height: 1.4;
+  }
+
+  #header-round strong { color: var(--text); }
+
+  #content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #tab-bar {
+    height: var(--tab-h);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-shrink: 0;
+  }
+
+  .tab-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px;
+    font-weight: 500;
+    transition: color .15s;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .tab-btn svg { width: 20px; height: 20px; }
+  .tab-btn.active { color: var(--gold); }
+  .tab-btn:active { opacity: .7; }
+
+  /* ─── LOGIN ─────────────────────────────────────── */
+  #login-screen {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 24px; z-index: 100;
+  }
+
+  .login-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    letter-spacing: 2px;
+    color: var(--gold);
+    line-height: 1;
+    text-align: center;
+  }
+
+  .login-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 4px;
+    margin-bottom: 36px;
+    text-align: center;
+    letter-spacing: 0.5px;
+  }
+
+  .login-form {
+    width: 100%;
+    max-width: 360px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .login-form input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    padding: 14px 16px;
+    outline: none;
+    transition: border-color .15s;
+  }
+
+  .login-form input:focus { border-color: var(--gold); }
+
+  .btn-primary {
+    background: var(--gold);
+    color: #000;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 14px;
+    cursor: pointer;
+    transition: background .15s, transform .1s;
+  }
+
+  .btn-primary:active { transform: scale(.98); background: var(--gold-dim); }
+  .btn-primary:disabled { opacity: .5; cursor: default; }
+
+  #login-error {
+    color: var(--red);
+    font-size: 13px;
+    text-align: center;
+    min-height: 18px;
+  }
+
+  /* ─── TABS CONTENT ──────────────────────────────── */
+  .tab-panel { display: none; padding: 16px; padding-bottom: 24px; }
+  .tab-panel.active { display: block; }
+
+  /* ─── SECTION HEADERS ───────────────────────────── */
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 1px;
+    color: var(--gold);
+    margin-bottom: 10px;
+    margin-top: 20px;
+  }
+
+  .section-title:first-child { margin-top: 0; }
+
+  /* ─── CARDS ─────────────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+
+  /* ─── FIXTURE ROWS ──────────────────────────────── */
+  .fixture-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    gap: 8px;
+  }
+
+  .fixture-row:last-child { border-bottom: none; }
+
+  .fixture-round-badge {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 11px;
+    color: var(--muted);
+    flex-shrink: 0;
+    font-weight: 500;
+  }
+
+  .fixture-row.current .fixture-round-badge {
+    background: var(--gold);
+    color: #000;
+    border-color: var(--gold);
+    font-weight: 600;
+  }
+
+  .fixture-teams {
+    flex: 1;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .fixture-team { font-weight: 500; }
+  .fixture-vs { color: var(--muted); font-size: 11px; }
+
+  .fixture-score {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 1px;
+    color: var(--text);
+    flex-shrink: 0;
+  }
+
+  .fixture-score.pending { color: var(--muted); font-size: 12px; font-family: 'DM Sans', sans-serif; }
+
+  .fixture-deadline {
+    font-size: 11px;
+    color: var(--muted);
+    flex-shrink: 0;
+    text-align: right;
+    line-height: 1.4;
+  }
+
+  /* ─── LADDER TABLE ──────────────────────────────── */
+  .ladder-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .ladder-table th {
+    background: var(--surface2);
+    color: var(--muted);
+    font-weight: 500;
+    font-size: 11px;
+    padding: 8px 10px;
+    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .ladder-table th:not(:first-child) { text-align: center; }
+
+  .ladder-table td {
+    padding: 10px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .ladder-table tr:last-child td { border-bottom: none; }
+  .ladder-table td:not(:first-child) { text-align: center; color: var(--muted); }
+
+  .ladder-pos {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    color: var(--muted);
+    margin-right: 10px;
+  }
+
+  .ladder-team { font-weight: 500; }
+  .ladder-pts { color: var(--text) !important; font-weight: 600; }
+
+  .finals-marker td { border-top: 2px solid var(--gold) !important; }
+
+  /* ─── LEADERBOARD ───────────────────────────────── */
+  .leader-row {
+    display: flex;
+    align-items: center;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+
+  .leader-row:last-child { border-bottom: none; }
+
+  .leader-pos {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    color: var(--muted);
+    width: 24px;
+    flex-shrink: 0;
+  }
+
+  .leader-pos.gold { color: var(--gold); }
+
+  .leader-name { flex: 1; font-weight: 500; font-size: 14px; }
+  .leader-sub  { font-size: 12px; color: var(--muted); }
+
+  .leader-score {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    color: var(--gold);
+    flex-shrink: 0;
+  }
+
+  /* ─── SQUAD TABLE ───────────────────────────────── */
+  .squad-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .squad-table th {
+    background: var(--surface2);
+    color: var(--muted);
+    font-weight: 500;
+    font-size: 10px;
+    padding: 7px 8px;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: sticky;
+    top: 0;
+  }
+
+  .squad-table th:first-child { text-align: left; }
+
+  .squad-table td {
+    padding: 9px 8px;
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+    color: var(--muted);
+  }
+
+  .squad-table tr:last-child td { border-bottom: none; }
+  .squad-table td:first-child { text-align: left; color: var(--text); font-weight: 500; }
+  .squad-table td:nth-child(2) { color: var(--text); }
+
+  /* ─── NOMINATION FORM ───────────────────────────── */
+  .position-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .position-row {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .position-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .position-label.starter { color: var(--gold); }
+
+  select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 10px 12px;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    cursor: pointer;
+    width: 100%;
+    outline: none;
+    transition: border-color .15s;
+  }
+
+  select:focus { border-color: var(--gold); }
+  select.invalid { border-color: var(--red); }
+
+  .section-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 16px 0;
+    position: relative;
+  }
+
+  .section-divider::after {
+    content: 'RESERVES';
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg);
+    padding: 0 10px;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+
+  .submit-info {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+
+  .deadline-chip {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .deadline-chip.open { border-color: var(--green); color: var(--green); }
+  .deadline-chip.closed { border-color: var(--red); color: var(--red); }
+
+  #submit-result {
+    font-size: 13px;
+    text-align: center;
+    padding: 10px;
+    border-radius: var(--radius);
+    margin-top: 10px;
+    display: none;
+  }
+
+  #submit-result.success { background: #1a2e1a; color: var(--green); display: block; }
+  #submit-result.error   { background: #2e1a1a; color: var(--red); display: block; }
+
+  /* ─── HISTORY TABLE ─────────────────────────────── */
+  .history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .history-table th {
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 500;
+    padding: 8px 10px;
+    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .history-table td {
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  .history-table tr:last-child td { border-bottom: none; }
+
+  .history-year {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 17px;
+    color: var(--gold);
+  }
+
+  /* ─── SELECT DROPDOWN (team chooser) ─────────── */
+  .team-select-wrap {
+    margin-bottom: 16px;
+  }
+
+  .team-select-wrap select {
+    font-size: 15px;
+    padding: 12px 14px;
+  }
+
+  /* ─── LOADING / EMPTY ───────────────────────────── */
+  .loading-row {
+    text-align: center;
+    padding: 32px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── ROUND SELECTOR ────────────────────────────── */
+  .round-selector {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    margin-bottom: 14px;
+    scrollbar-width: none;
+  }
+
+  .round-selector::-webkit-scrollbar { display: none; }
+
+  .round-chip {
+    flex-shrink: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    transition: all .15s;
+  }
+
+  .round-chip.active {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: #000;
+    font-weight: 600;
+  }
+
+  /* ─── UTILITY ───────────────────────────────────── */
+  .tag {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .w-winner { color: var(--green); font-weight: 600; }
+  .w-loser  { color: var(--muted); }
+
+  /* Fix overflow on small screens */
+  .scroll-x { overflow-x: auto; }
+</style>
+</head>
+<body>
+
+<!-- ─── LOGIN SCREEN ─────────────────────────── -->
+<div id="login-screen">
+  <div class="login-logo">Great Mates<br>FFL</div>
+  <div class="login-sub">2026 Season</div>
+  <form class="login-form" onsubmit="handleLogin(event)">
+    <input type="email" id="login-email" placeholder="Email address" autocomplete="email" required>
+    <input type="password" id="login-pass" placeholder="Password" autocomplete="current-password" required>
+    <div id="login-error"></div>
+    <button class="btn-primary" type="submit" id="login-btn">Sign In</button>
+  </form>
+</div>
+
+<!-- ─── MAIN APP ──────────────────────────────── -->
+<div id="app" style="display:none">
+  <div id="header">
+    <div id="header-title">GREAT MATES FFL</div>
+    <div id="header-round">Loading...</div>
+  </div>
+
+  <div id="content">
+    <!-- RESULTS TAB -->
+    <div class="tab-panel active" id="tab-results">
+      <div class="section-title">Fixtures & Results</div>
+      <div class="card" id="results-fixtures-card">
+        <div class="loading-row"><span class="spinner"></span>Loading...</div>
+      </div>
+
+      <div class="section-title">Ladder</div>
+      <div class="card" id="results-ladder-card">
+        <div class="loading-row"><span class="spinner"></span>Loading...</div>
+      </div>
+
+      <div class="section-title">The Broach</div>
+      <div class="card" id="results-broach-card">
+        <div class="loading-row"><span class="spinner"></span>Loading...</div>
+      </div>
+
+      <div class="section-title">Cruel Mistress</div>
+      <div class="card" id="results-cm-card">
+        <div class="loading-row"><span class="spinner"></span>Loading...</div>
+      </div>
+    </div>
+
+    <!-- FIXTURES TAB -->
+    <div class="tab-panel" id="tab-fixtures">
+      <div class="section-title">Fixtures</div>
+      <div id="fixtures-round-selector" class="round-selector"></div>
+      <div class="card" id="fixtures-card">
+        <div class="loading-row"><span class="spinner"></span>Loading...</div>
+      </div>
+    </div>
+
+    <!-- SQUAD TAB -->
+    <div class="tab-panel" id="tab-squad">
+      <div class="section-title">Squad Details</div>
+      <div class="team-select-wrap">
+        <select id="squad-team-select" onchange="loadSquadStats()">
+          <option value="">Select a team...</option>
+        </select>
+      </div>
+      <div class="card" id="squad-card">
+        <div class="empty-state">Select a team to view squad.</div>
+      </div>
+    </div>
+
+    <!-- NOMINATIONS TAB -->
+    <div class="tab-panel" id="tab-nom">
+      <div class="section-title" id="nom-title">Team Nomination</div>
+      <div id="nom-deadline-chip" class="deadline-chip"></div>
+      <div id="nom-round-label" class="submit-info"></div>
+      <div id="nom-form-wrap"></div>
+    </div>
+
+    <!-- HISTORY TAB -->
+    <div class="tab-panel" id="tab-history">
+      <div class="section-title">Season Honours</div>
+      <div class="card" id="history-results-card">
+        <div class="loading-row"><span class="spinner"></span>Loading...</div>
+      </div>
+      <div class="section-title">Office Bearers</div>
+      <div class="card" id="history-ob-card">
+        <div class="loading-row"><span class="spinner"></span>Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB BAR -->
+  <div id="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('results', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+      Results
+    </button>
+    <button class="tab-btn" onclick="switchTab('fixtures', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      Fixtures
+    </button>
+    <button class="tab-btn" onclick="switchTab('squad', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Squads
+    </button>
+    <button class="tab-btn" onclick="switchTab('nom', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      My Team
+    </button>
+    <button class="tab-btn" onclick="switchTab('history', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+      History
+    </button>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ─────────────────────────────────────────────
+const API = 'https://script.google.com/macros/s/AKfycbwOQGl0zWWCHTW8EwvIMNB5ZvpoykUiC0GRcJ78Xp4a29vbgowgwVSD0p5YW_cGtCyS/exec';
+
+const POSITIONS = ['Forward 1', 'Forward 2', 'Ruck', 'Marker', 'Midfielder', 'Tackler', 'All Rounder'];
+
+// ─── STATE ──────────────────────────────────────────────
+let state = {
+  token:    null,
+  team:     null,
+  role:     null,
+  coach:    null,
+  metadata: null,
+  squads:   null,
+  fixtures: null,
+  allTeams: [],
+};
+
+// ─── STORAGE ─────────────────────────────────────────────
+function saveSession(token, team, role, coach) {
+  try {
+    localStorage.setItem('ffl_token', token);
+    localStorage.setItem('ffl_team',  team);
+    localStorage.setItem('ffl_role',  role);
+    localStorage.setItem('ffl_coach', coach);
+  } catch(e) {}
+}
+
+function loadSession() {
+  try {
+    return {
+      token: localStorage.getItem('ffl_token'),
+      team:  localStorage.getItem('ffl_team'),
+      role:  localStorage.getItem('ffl_role'),
+      coach: localStorage.getItem('ffl_coach'),
+    };
+  } catch(e) { return {}; }
+}
+
+function clearSession() {
+  try {
+    localStorage.removeItem('ffl_token');
+    localStorage.removeItem('ffl_team');
+    localStorage.removeItem('ffl_role');
+    localStorage.removeItem('ffl_coach');
+  } catch(e) {}
+}
+
+// ─── API HELPERS ─────────────────────────────────────────
+async function apiGet(action, params = {}) {
+  const url = new URL(API);
+  url.searchParams.set('action', action);
+  if (state.token) url.searchParams.set('token', state.token);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  const r = await fetch(url.toString());
+  return r.json();
+}
+
+async function apiPost(payload) {
+  const r = await fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...payload, token: state.token }),
+  });
+  return r.json();
+}
+
+// ─── AUTH ─────────────────────────────────────────────────
+async function handleLogin(e) {
+  e.preventDefault();
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-error');
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+
+  btn.disabled = true;
+  btn.textContent = 'Signing in...';
+  err.textContent = '';
+
+  try {
+    const data = await apiPost({ action: 'login', email, password: pass });
+    if (data.success) {
+      state.token = data.token;
+      state.team  = data.team;
+      state.role  = data.role;
+      state.coach = data.coach || '';
+      saveSession(data.token, data.team, data.role, data.coach || '');
+      showApp();
+    } else {
+      err.textContent = data.message || 'Login failed. Check your email and password.';
+      btn.disabled = false;
+      btn.textContent = 'Sign In';
+    }
+  } catch(ex) {
+    err.textContent = 'Network error. Please try again.';
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
+  }
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  initApp();
+}
+
+// ─── INIT ─────────────────────────────────────────────────
+async function initApp() {
+  // Load metadata + squads + fixtures in parallel
+  const [meta, squads, fixtures] = await Promise.all([
+    apiGet('getMetadata'),
+    apiGet('getSquads'),
+    apiGet('getFixtures'),
+  ]);
+
+  state.metadata = meta;
+  state.squads   = squads;
+  state.fixtures = fixtures;
+  state.allTeams = Object.keys(squads).sort();
+
+  // Header
+  const headerRound = document.getElementById('header-round');
+  if (meta.current_round) {
+    const dl = meta.deadline ? formatDeadline(meta.deadline) : '';
+    headerRound.innerHTML = `<strong>${meta.current_round}</strong>${dl ? '<br>' + dl : ''}`;
+  } else {
+    headerRound.textContent = 'Pre-season';
+  }
+
+  // Populate squad team selector
+  const sel = document.getElementById('squad-team-select');
+  state.allTeams.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t; opt.textContent = t;
+    if (t === state.team) opt.selected = true;
+    sel.appendChild(opt);
+  });
+
+  // Load all tab data
+  renderResultsFixtures();
+  renderLadder();
+  renderBroach();
+  renderCruelMistress();
+  renderFixturesTab();
+  renderNominationForm();
+  renderHistory();
+
+  // Auto-load user's own squad
+  if (state.team) {
+    sel.value = state.team;
+    loadSquadStats();
+  }
+}
+
+// ─── TAB SWITCHING ────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ─── RESULTS TAB ─────────────────────────────────────────
+function renderResultsFixtures() {
+  const card = document.getElementById('results-fixtures-card');
+  if (!state.fixtures || !state.fixtures.fixtures) {
+    card.innerHTML = '<div class="empty-state">Fixtures not available.</div>';
+    return;
+  }
+
+  // Show current round fixtures only (expand to others later)
+  const current = state.fixtures.currentRound;
+  const matches  = state.fixtures.fixtures.filter(f => f.round === current);
+  if (!matches.length) {
+    card.innerHTML = `<div class="empty-state">No fixtures for ${current || 'this round'}.</div>`;
+    return;
+  }
+
+  card.innerHTML = matches.map(f => `
+    <div class="fixture-row current">
+      <div class="fixture-round-badge">${f.round}</div>
+      <div class="fixture-teams">
+        <div class="fixture-team">${f.home}</div>
+        <div class="fixture-vs">vs</div>
+        <div class="fixture-team">${f.away}</div>
+      </div>
+      ${f.homeScore != null && f.homeScore > 0
+        ? `<div class="fixture-score">${f.homeScore} – ${f.awayScore}</div>`
+        : `<div class="fixture-score pending">${f.deadline ? formatDeadline(f.deadline) : 'TBC'}</div>`
+      }
+    </div>
+  `).join('');
+}
+
+async function renderLadder() {
+  const card = document.getElementById('results-ladder-card');
+  const data  = await apiGet('getLadder');
+
+  if (!data.ladder || data.ladder.length === 0) {
+    card.innerHTML = '<div class="empty-state">Ladder will appear once the season begins.</div>';
+    return;
+  }
+
+  card.innerHTML = `
+    <div class="scroll-x">
+    <table class="ladder-table">
+      <thead><tr>
+        <th>Team</th><th>W</th><th>L</th><th>D</th><th>PF</th><th>PA</th><th>Pts</th>
+      </tr></thead>
+      <tbody>
+        ${data.ladder.map((row, i) => `
+          <tr class="${i === 4 ? 'finals-marker' : ''}">
+            <td><span class="ladder-pos">${row.pos}</span><span class="ladder-team">${row.team}</span></td>
+            <td>${row.w}</td><td>${row.l}</td><td>${row.d}</td>
+            <td>${row.pf}</td><td>${row.pa}</td>
+            <td class="ladder-pts">${row.pts}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    </div>`;
+}
+
+async function renderBroach() {
+  const card = document.getElementById('results-broach-card');
+  const data  = await apiGet('getBroach');
+
+  if (!data.leaderboard || data.leaderboard.length === 0) {
+    card.innerHTML = '<div class="empty-state">Broach votes will appear after Round 1.</div>';
+    return;
+  }
+
+  card.innerHTML = data.leaderboard.slice(0, 8).map((row, i) => `
+    <div class="leader-row">
+      <div class="leader-pos ${i === 0 ? 'gold' : ''}">${i + 1}</div>
+      <div class="leader-name">${row.player}</div>
+      <div class="leader-score">${row.votes}</div>
+    </div>
+  `).join('');
+}
+
+async function renderCruelMistress() {
+  const card = document.getElementById('results-cm-card');
+  const data  = await apiGet('getCruelMistress');
+
+  if (!data.leaderboard || data.leaderboard.length === 0) {
+    card.innerHTML = `<div class="empty-state">${data.error || 'No Cruel Mistress data yet.'}</div>`;
+    return;
+  }
+
+  card.innerHTML = data.leaderboard.map((row, i) => `
+    <div class="leader-row">
+      <div class="leader-pos ${i === 0 ? 'gold' : ''}">${i + 1}</div>
+      <div>
+        <div class="leader-name">${row.team}</div>
+      </div>
+      <div class="leader-score">${row.pts}</div>
+    </div>
+  `).join('');
+}
+
+// ─── FIXTURES TAB ─────────────────────────────────────────
+function renderFixturesTab() {
+  if (!state.fixtures || !state.fixtures.fixtures) return;
+
+  const fixtures = state.fixtures.fixtures;
+  const rounds   = [...new Set(fixtures.map(f => f.round))];
+  const current  = state.fixtures.currentRound || rounds[0];
+
+  // Round selector chips
+  const selector = document.getElementById('fixtures-round-selector');
+  selector.innerHTML = rounds.map(r => `
+    <button class="round-chip ${r === current ? 'active' : ''}"
+      onclick="filterFixturesByRound('${r}', this)">${r}</button>
+  `).join('');
+
+  filterFixturesByRound(current);
+}
+
+function filterFixturesByRound(round, btn) {
+  if (btn) {
+    document.querySelectorAll('#fixtures-round-selector .round-chip').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  const card    = document.getElementById('fixtures-card');
+  const matches = (state.fixtures.fixtures || []).filter(f => f.round === round);
+
+  if (!matches.length) {
+    card.innerHTML = '<div class="empty-state">No fixtures found for this round.</div>';
+    return;
+  }
+
+  card.innerHTML = matches.map(f => `
+    <div class="fixture-row">
+      <div class="fixture-teams" style="flex:1">
+        <div class="fixture-team">${f.home}</div>
+        <div class="fixture-vs">vs</div>
+        <div class="fixture-team">${f.away}</div>
+      </div>
+      <div class="fixture-deadline">
+        ${f.deadline ? formatDeadlineLong(f.deadline) : '—'}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── SQUAD TAB ────────────────────────────────────────────
+async function loadSquadStats() {
+  const team = document.getElementById('squad-team-select').value;
+  const card = document.getElementById('squad-card');
+  if (!team) { card.innerHTML = '<div class="empty-state">Select a team to view squad.</div>'; return; }
+
+  card.innerHTML = '<div class="loading-row"><span class="spinner"></span>Loading...</div>';
+
+  const data = await apiGet('getPlayerStats', { team });
+
+  // If stats tab not populated yet, fall back to plain squad list
+  if (!data.players || data.players.length === 0) {
+    const squad = (state.squads && state.squads[team]) || [];
+    if (!squad.length) { card.innerHTML = '<div class="empty-state">No squad data found.</div>'; return; }
+
+    card.innerHTML = `
+      <div class="scroll-x">
+      <table class="squad-table">
+        <thead><tr><th>Player</th></tr></thead>
+        <tbody>
+          ${squad.map(p => `<tr><td>${p}</td></tr>`).join('')}
+        </tbody>
+      </table>
+      </div>
+      <div style="padding:10px 14px;font-size:11px;color:var(--muted)">
+        Stats will appear once the season begins.
+      </div>`;
+    return;
+  }
+
+  card.innerHTML = `
+    <div class="scroll-x">
+    <table class="squad-table">
+      <thead><tr>
+        <th>Player</th><th>Club</th><th>GP</th>
+        <th>K</th><th>H</th><th>M</th><th>T</th><th>HO</th><th>G</th>
+      </tr></thead>
+      <tbody>
+        ${data.players.map(p => `
+          <tr>
+            <td>${p.player}</td>
+            <td>${p.club || '—'}</td>
+            <td>${p.games || '—'}</td>
+            <td>${p.avgK || '—'}</td>
+            <td>${p.avgH || '—'}</td>
+            <td>${p.avgM || '—'}</td>
+            <td>${p.avgT || '—'}</td>
+            <td>${p.avgHO || '—'}</td>
+            <td>${p.avgG || '—'}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    </div>`;
+}
+
+// ─── NOMINATION TAB ───────────────────────────────────────
+async function renderNominationForm() {
+  const wrap = document.getElementById('nom-form-wrap');
+  const chip = document.getElementById('nom-deadline-chip');
+  const roundLabel = document.getElementById('nom-round-label');
+
+  if (!state.team) {
+    wrap.innerHTML = '<div class="empty-state">Not logged in.</div>';
+    return;
+  }
+
+  const meta     = state.metadata || {};
+  const open     = meta.submissionsOpen;
+  const deadline = meta.deadline ? formatDeadlineLong(meta.deadline) : '—';
+
+  chip.textContent = open ? `Open — deadline ${deadline}` : `Closed — deadline passed`;
+  chip.className   = `deadline-chip ${open ? 'open' : 'closed'}`;
+  roundLabel.textContent = `${meta.current_round || 'Round 1'} — ${state.team}`;
+
+  // Fetch existing nomination to pre-fill
+  let existing = { starters: {}, reserves: {} };
+  try {
+    const nom = await apiGet('getNomination', { team: state.team });
+    if (nom.nomination) existing = nom.nomination;
+  } catch(e) {}
+
+  const squad = (state.squads && state.squads[state.team]) || [];
+
+  const makeOptions = (selected) =>
+    `<option value="">— select —</option>` +
+    squad.map(p => `<option value="${p}" ${p === selected ? 'selected' : ''}>${p}</option>`).join('');
+
+  wrap.innerHTML = `
+    <div class="position-grid" id="starters-grid">
+      ${POSITIONS.map(pos => `
+        <div class="position-row">
+          <div class="position-label starter">${pos}</div>
+          <select id="s_${pos.replace(/ /g,'_')}" ${!open ? 'disabled' : ''}>
+            ${makeOptions(existing.starters[pos] || '')}
+          </select>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="section-divider"></div>
+
+    <div class="position-grid" id="reserves-grid">
+      ${POSITIONS.map(pos => `
+        <div class="position-row">
+          <div class="position-label">${pos}</div>
+          <select id="r_${pos.replace(/ /g,'_')}" ${!open ? 'disabled' : ''}>
+            ${makeOptions(existing.reserves[pos] || '')}
+          </select>
+        </div>
+      `).join('')}
+    </div>
+
+    ${open ? `
+      <div class="submit-info">Reserves may repeat starters. Starters must be unique.</div>
+      <button class="btn-primary" onclick="submitNomination()" id="nom-submit-btn">Submit Team</button>
+      <div id="submit-result"></div>
+    ` : `
+      <div class="empty-state">Submissions are closed for this round.</div>
+    `}`;
+}
+
+async function submitNomination() {
+  const btn = document.getElementById('nom-submit-btn');
+  const res = document.getElementById('submit-result');
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+  res.className = '';
+  res.style.display = 'none';
+
+  const starters = {};
+  const reserves = {};
+
+  POSITIONS.forEach(pos => {
+    const key = pos.replace(/ /g, '_');
+    starters[pos] = document.getElementById('s_' + key)?.value || '';
+    reserves[pos]  = document.getElementById('r_' + key)?.value  || '';
+  });
+
+  try {
+    const data = await apiPost({
+      action: 'submitNomination',
+      round:  state.metadata?.current_round || 'Rd01',
+      selections: { starters, reserves },
+    });
+
+    if (data.success) {
+      res.textContent = '✓ Team submitted successfully!';
+      res.className   = 'success';
+    } else {
+      res.textContent = data.message || 'Submission failed.';
+      res.className   = 'error';
+    }
+  } catch(e) {
+    res.textContent = 'Network error. Please try again.';
+    res.className   = 'error';
+  }
+
+  res.style.display = 'block';
+  btn.disabled = false;
+  btn.textContent = 'Submit Team';
+}
+
+// ─── HISTORY TAB ─────────────────────────────────────────
+async function renderHistory() {
+  const resCard = document.getElementById('history-results-card');
+  const obCard  = document.getElementById('history-ob-card');
+
+  const data = await apiGet('getHistoricalRecords');
+
+  // Season results
+  const results = (data.seasonResults || []).filter(r => r.premier).reverse();
+  if (!results.length) {
+    resCard.innerHTML = '<div class="empty-state">No historical data available.</div>';
+  } else {
+    resCard.innerHTML = `
+      <div class="scroll-x">
+      <table class="history-table">
+        <thead><tr>
+          <th>Year</th><th>Premier</th><th>Score</th><th>Runner Up</th><th>Wooden Spoon</th>
+        </tr></thead>
+        <tbody>
+          ${results.map(r => `
+            <tr>
+              <td><span class="history-year">${r.year}</span></td>
+              <td><strong>${r.premier || '—'}</strong></td>
+              <td><span class="tag">${r.premierScore || '—'} v ${r.runnerUpScore || '—'}</span></td>
+              <td>${r.runnerUp || '—'}</td>
+              <td style="color:var(--muted)">${r.woodenSpoon || '—'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      </div>`;
+  }
+
+  // Office bearers
+  const ob = (data.officeBearers || []).filter(r => r.president).reverse();
+  if (!ob.length) {
+    obCard.innerHTML = '<div class="empty-state">No office bearer data available.</div>';
+  } else {
+    obCard.innerHTML = `
+      <div class="scroll-x">
+      <table class="history-table">
+        <thead><tr>
+          <th>Year</th><th>President</th><th>VP</th><th>Treasurer</th>
+        </tr></thead>
+        <tbody>
+          ${ob.map(r => `
+            <tr>
+              <td><span class="history-year">${r.year}</span></td>
+              <td>${r.president || '—'}</td>
+              <td>${r.vicePresident || '—'}</td>
+              <td>${r.treasurer || '—'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      </div>`;
+  }
+}
+
+// ─── DATE FORMATTING ──────────────────────────────────────
+function formatDeadline(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+  } catch(e) { return ''; }
+}
+
+function formatDeadlineLong(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  } catch(e) { return iso; }
+}
+
+// ─── STARTUP ──────────────────────────────────────────────
+(function() {
+  const saved = loadSession();
+  if (saved.token && saved.team) {
+    state.token = saved.token;
+    state.team  = saved.team;
+    state.role  = saved.role;
+    state.coach = saved.coach;
+    showApp();
+  }
+})();
+</script>
+</body>
+</html>
