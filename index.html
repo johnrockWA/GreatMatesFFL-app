@@ -12,17 +12,18 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg:        #111111;
-    --surface:   #1e1e1e;
-    --surface2:  #272727;
-    --border:    #383838;
-    --gold:      #cc2200;
-    --gold-dim:  #a01a00;
-    --text:      #f0f0f0;
-    --muted:     #888888;
-    --green:     #2db84b;
-    --red:       #e63946;
-    --blue:      #4a9eff;
+    /* AFL / CA inspired navy + electric blue palette */
+    --bg:        #03101f;   /* deep navy — AFL app background */
+    --surface:   #0b1e33;   /* card surface */
+    --surface2:  #112740;   /* elevated surface / table headers */
+    --border:    #1e3a55;   /* subtle border */
+    --gold:      #1a7fe8;   /* electric blue — primary accent */
+    --gold-dim:  #135fb8;   /* accent hover/active */
+    --text:      #f0f4f8;   /* off-white */
+    --muted:     #7a94aa;   /* muted blue-grey */
+    --green:     #1ec971;   /* success green */
+    --red:       #e63946;   /* error red */
+    --blue:      #4ab8ff;   /* highlight / info blue */
     --radius:    10px;
     --tab-h:     60px;
     --header-h:  56px;
@@ -51,7 +52,7 @@
 
   #header {
     height: var(--header-h);
-    background: var(--surface);
+    background: linear-gradient(180deg, #0d2a45 0%, var(--surface) 100%);
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
@@ -86,7 +87,7 @@
 
   #tab-bar {
     height: calc(var(--tab-h) + env(safe-area-inset-bottom, 0px));
-    background: var(--surface);
+    background: linear-gradient(0deg, #0d2a45 0%, var(--surface) 100%);
     border-top: 1px solid var(--border);
     display: flex;
     flex-shrink: 0;
@@ -167,7 +168,7 @@
 
   .btn-primary {
     background: var(--gold);
-    color: #000;
+    color: #fff;
     border: none;
     border-radius: var(--radius);
     font-family: 'DM Sans', sans-serif;
@@ -237,7 +238,7 @@
 
   .fixture-row.current .fixture-round-badge {
     background: var(--gold);
-    color: #000;
+    color: #fff;
     border-color: var(--gold);
     font-weight: 600;
   }
@@ -714,7 +715,7 @@
   .round-chip.active {
     background: var(--gold);
     border-color: var(--gold);
-    color: #000;
+    color: #fff;
     font-weight: 600;
   }
 
