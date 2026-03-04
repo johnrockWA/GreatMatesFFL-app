@@ -812,13 +812,13 @@
     </div>
 
     <!-- HISTORY TAB -->
-    <div class="tab-panel" id="tab-history">
+    <div class="tab-panel" id="tab-records">
       <div class="section-title">Season Honours</div>
-      <div class="card" id="history-results-card">
+      <div class="card" id="records-results-card">
         <div class="loading-row"><span class="spinner"></span>Loading...</div>
       </div>
       <div class="section-title">Office Bearers</div>
-      <div class="card" id="history-ob-card">
+      <div class="card" id="records-ob-card">
         <div class="loading-row"><span class="spinner"></span>Loading...</div>
       </div>
     </div>
@@ -842,9 +842,9 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
       My Team
     </button>
-    <button class="tab-btn" onclick="switchTab('history', this)">
+    <button class="tab-btn" onclick="switchTab('records', this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
-      History
+      Records
     </button>
   </div>
 </div>
@@ -861,20 +861,24 @@ let state = {
   team:     null,
   role:     null,
   coach:    null,
+  email:    null,      // logged-in coach's email — written to nominations
   metadata: null,
   squads:      null,   // plain player names
   myTeamNames: null,   // formatted: 'Ben King (GC)'
   fixtures:    null,
   allTeams: [],
+  nomSelectedRound: null,  // round currently showing in My Team tab
+  nomSelectedTeam:  null,  // team currently showing (admin only)
 };
 
 // ─── STORAGE ─────────────────────────────────────────────
-function saveSession(token, team, role, coach) {
+function saveSession(token, team, role, coach, email) {
   try {
     localStorage.setItem('ffl_token', token);
     localStorage.setItem('ffl_team',  team);
     localStorage.setItem('ffl_role',  role);
     localStorage.setItem('ffl_coach', coach);
+    localStorage.setItem('ffl_email', email || '');
   } catch(e) {}
 }
 
@@ -885,6 +889,7 @@ function loadSession() {
       team:  localStorage.getItem('ffl_team'),
       role:  localStorage.getItem('ffl_role'),
       coach: localStorage.getItem('ffl_coach'),
+      email: localStorage.getItem('ffl_email') || '',
     };
   } catch(e) { return {}; }
 }
@@ -895,6 +900,7 @@ function clearSession() {
     localStorage.removeItem('ffl_team');
     localStorage.removeItem('ffl_role');
     localStorage.removeItem('ffl_coach');
+    localStorage.removeItem('ffl_email');
   } catch(e) {}
 }
 
@@ -939,7 +945,8 @@ async function handleLogin(e) {
       state.team  = data.team;
       state.role  = data.role;
       state.coach = data.coach || '';
-      saveSession(data.token, data.team, data.role, data.coach || '');
+      state.email = email;  // email is already in scope from the login form
+      saveSession(data.token, data.team, data.role, data.coach || '', email);
       showApp();
     } else {
       err.textContent = data.message || 'Login failed. Check your email and password.';
@@ -1000,7 +1007,7 @@ async function initApp() {
   renderCruelMistress();
   renderFixturesTab();
   renderNominationForm();
-  renderHistory();
+  renderRecords();
 
   // Auto-load user's own squad
   if (state.team) {
@@ -1251,7 +1258,7 @@ async function loadSquadStats() {
 
   const data = await apiGet('getPlayerStats', { team });
 
-  // Fallback to plain list if no stats yet
+  // Fallback: no players returned — show plain squad list
   if (!data.players || data.players.length === 0) {
     const squad = (state.squads && state.squads[team]) || [];
     if (!squad.length) { card.innerHTML = '<div class="empty-state">No squad data found.</div>'; return; }
@@ -1265,61 +1272,134 @@ async function loadSquadStats() {
     return;
   }
 
-  const d = (v) => (v === undefined || v === null || v === '') ? '-' : v;
+  // data.columns = header labels live from Row 2 of SquadStats sheet
+  // data.players = array of value arrays; index 0 = player name (sticky), rest = stats
+  const cols    = data.columns || [];
+  const players = data.players || [];
+
+  // First column header is Player (sticky), rest are stat headers
+  const headerHtml = cols.map((col, i) =>
+    i === 0
+      ? `<th class="sticky-col">${col}</th>`
+      : `<th>${col}</th>`
+  ).join('');
+
+  const rowsHtml = players.map(row =>
+    '<tr>' + row.map((val, i) =>
+      i === 0
+        ? `<td class="sticky-col">${val}</td>`
+        : `<td>${val}</td>`
+    ).join('') + '</tr>'
+  ).join('');
 
   card.innerHTML = `
     <div class="squad-scroll-wrap">
     <table class="squad-table squad-sticky">
-      <thead><tr>
-        <th class="sticky-col">Player</th>
-        <th>Club</th><th>Career</th><th>2026</th>
-        <th>Av K</th><th>Av H</th><th>Av D</th><th>Av M</th><th>Av HO</th>
-        <th>Av T</th><th>Av FF</th><th>Av FA</th><th>Av G</th><th>Av B</th>
-      </tr></thead>
-      <tbody>
-        ${data.players.map(p => `
-          <tr>
-            <td class="sticky-col">${p.player}</td>
-            <td>${d(p.club)}</td><td>${d(p.careerGames)}</td><td>${d(p.games2026)}</td>
-            <td>${d(p.avgK)}</td><td>${d(p.avgH)}</td><td>${d(p.avgD)}</td>
-            <td>${d(p.avgM)}</td><td>${d(p.avgHO)}</td><td>${d(p.avgT)}</td>
-            <td>${d(p.avgFF)}</td><td>${d(p.avgFA)}</td><td>${d(p.avgG)}</td>
-            <td>${d(p.avgB)}</td>
-          </tr>
-        `).join('')}
-      </tbody>
+      <thead><tr>${headerHtml}</tr></thead>
+      <tbody>${rowsHtml}</tbody>
     </table>
     </div>`;
 }
 
 // ─── NOMINATION TAB ───────────────────────────────────────
+
+/*
+  renderNominationForm() — sets up the shell: admin team picker + round chips + selections area.
+  loadNominationSelections(team, round) — fetches existing nom and renders dropdowns.
+  onNomRoundChange / onNomTeamChange — event handlers for chips and admin dropdown.
+  submitNomination() — collects selections, posts to API.
+*/
+
 async function renderNominationForm() {
   const wrap = document.getElementById('nom-form-wrap');
-  const chip = document.getElementById('nom-deadline-chip');
-  const roundLabel = document.getElementById('nom-round-label');
 
   if (!state.team) {
     wrap.innerHTML = '<div class="empty-state">Not logged in.</div>';
+    document.getElementById('nom-deadline-chip').textContent = '';
+    document.getElementById('nom-round-label').textContent   = '';
     return;
   }
 
-  const meta     = state.metadata || {};
-  const open     = meta.submissionsOpen;
-  const deadline = meta.deadline ? formatDeadlineLong(meta.deadline) : '—';
+  const isAdmin = state.role === 'admin';
 
-  chip.textContent = open ? `Open — deadline ${deadline}` : `Closed — deadline passed`;
+  // Build list of rounds that haven't had their deadline pass yet
+  const now         = new Date();
+  const allFixtures = (state.fixtures && state.fixtures.fixtures) || [];
+  const futureRounds = [...new Set(
+    allFixtures
+      .filter(f => !f.deadline || new Date(f.deadline) > now)
+      .map(f => f.round)
+  )];
+
+  // Default: current round from fixtures, or first future round
+  const defaultRound = state.fixtures?.currentRound || futureRounds[0] || null;
+
+  // Preserve selections across re-renders; default on first load
+  if (!state.nomSelectedRound) state.nomSelectedRound = defaultRound;
+  if (!state.nomSelectedTeam)  state.nomSelectedTeam  = state.team;
+
+  const activeRound = state.nomSelectedRound;
+  const activeTeam  = isAdmin ? state.nomSelectedTeam : state.team;
+
+  // Render the static shell
+  wrap.innerHTML = `
+    ${isAdmin ? `
+      <div class="team-select-wrap" style="margin-bottom:12px">
+        <select id="nom-team-select" onchange="onNomTeamChange(this.value)">
+          ${state.allTeams.map(t =>
+            `<option value="${t}" ${t === activeTeam ? 'selected' : ''}>${t}</option>`
+          ).join('')}
+        </select>
+      </div>` : ''}
+
+    <div id="nom-round-selector" class="round-selector">
+      ${futureRounds.length
+        ? futureRounds.map(r =>
+            `<button class="round-chip ${r === activeRound ? 'active' : ''}"
+              onclick="onNomRoundChange('${r}', this)">${r}</button>`
+          ).join('')
+        : '<span style="color:var(--muted);font-size:13px;padding:4px 0">No upcoming rounds available</span>'
+      }
+    </div>
+
+    <div id="nom-selections-wrap">
+      <div class="loading-row"><span class="spinner"></span>Loading...</div>
+    </div>`;
+
+  if (activeRound) {
+    await loadNominationSelections(activeTeam, activeRound);
+  }
+}
+
+// Fetch existing nomination for team+round and render the dropdowns
+async function loadNominationSelections(team, round) {
+  const wrap      = document.getElementById('nom-selections-wrap');
+  const chip      = document.getElementById('nom-deadline-chip');
+  const roundLbl  = document.getElementById('nom-round-label');
+  if (!wrap) return;
+
+  // Per-round deadline check
+  const allFixtures = (state.fixtures && state.fixtures.fixtures) || [];
+  const match       = allFixtures.find(f => f.round === round);
+  const deadline    = match?.deadline || null;
+  const open        = !deadline || new Date() < new Date(deadline);
+  const deadlineStr = deadline ? formatDeadlineLong(deadline) : '—';
+
+  chip.textContent = open ? `Open — deadline ${deadlineStr}` : `Closed — deadline passed`;
   chip.className   = `deadline-chip ${open ? 'open' : 'closed'}`;
-  roundLabel.textContent = `${meta.current_round || 'Round 1'} — ${state.team}`;
+  roundLbl.textContent = `${round} — ${team}`;
+
+  wrap.innerHTML = '<div class="loading-row"><span class="spinner"></span>Loading...</div>';
 
   // Fetch existing nomination to pre-fill
   let existing = { starters: {}, reserves: {} };
   try {
-    const nom = await apiGet('getNomination', { team: state.team });
+    const nom = await apiGet('getNomination', { team, round });
     if (nom.nomination) existing = nom.nomination;
   } catch(e) {}
 
-  const squad = (state.myTeamNames && state.myTeamNames[state.team])
-             || (state.squads    && state.squads[state.team])
+  const squad = (state.myTeamNames && state.myTeamNames[team])
+             || (state.squads    && state.squads[team])
              || [];
 
   const makeOptions = (selected) =>
@@ -1360,17 +1440,35 @@ async function renderNominationForm() {
     `}`;
 }
 
+// Round chip clicked — update active chip and reload selections
+function onNomRoundChange(round, btn) {
+  document.querySelectorAll('#nom-round-selector .round-chip').forEach(c => c.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  state.nomSelectedRound = round;
+  const team = (state.role === 'admin' ? state.nomSelectedTeam : null) || state.team;
+  loadNominationSelections(team, round);
+}
+
+// Admin team dropdown changed — reload selections for new team
+function onNomTeamChange(team) {
+  state.nomSelectedTeam = team;
+  const round = state.nomSelectedRound || state.fixtures?.currentRound;
+  if (round) loadNominationSelections(team, round);
+}
+
 async function submitNomination() {
   const btn = document.getElementById('nom-submit-btn');
   const res = document.getElementById('submit-result');
-  btn.disabled = true;
+  btn.disabled    = true;
   btn.textContent = 'Submitting...';
-  res.className = '';
+  res.className   = '';
   res.style.display = 'none';
+
+  const round = state.nomSelectedRound || state.metadata?.current_round || 'Rd01';
+  const team  = (state.role === 'admin' ? state.nomSelectedTeam : null) || state.team;
 
   const starters = {};
   const reserves = {};
-
   POSITIONS.forEach(pos => {
     const key = pos.replace(/ /g, '_');
     starters[pos] = document.getElementById('s_' + key)?.value || '';
@@ -1380,12 +1478,12 @@ async function submitNomination() {
   try {
     const data = await apiPost({
       action: 'submitNomination',
-      round:  state.metadata?.current_round || 'Rd01',
-      selections: { starters, reserves },
+      round,
+      selections: { starters, reserves, login: state.email || '' },
     });
 
     if (data.success) {
-      res.textContent = '✓ Team submitted successfully!';
+      res.textContent = `✓ ${team} submitted for ${round}!`;
       res.className   = 'success';
     } else {
       res.textContent = data.message || 'Submission failed.';
@@ -1397,14 +1495,14 @@ async function submitNomination() {
   }
 
   res.style.display = 'block';
-  btn.disabled = false;
+  btn.disabled    = false;
   btn.textContent = 'Submit Team';
 }
 
-// ─── HISTORY TAB ─────────────────────────────────────────
-async function renderHistory() {
-  const resCard = document.getElementById('history-results-card');
-  const obCard  = document.getElementById('history-ob-card');
+// ─── RECORDS TAB ─────────────────────────────────────────
+async function renderRecords() {
+  const resCard = document.getElementById('records-results-card');
+  const obCard  = document.getElementById('records-ob-card');
 
   const data = await apiGet('getHistoricalRecords');
 
@@ -1484,6 +1582,7 @@ function formatDeadlineLong(iso) {
     state.team  = saved.team;
     state.role  = saved.role;
     state.coach = saved.coach;
+    state.email = saved.email || '';
     showApp();
   }
 })();
